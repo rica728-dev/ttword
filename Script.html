@@ -1,0 +1,960 @@
+<script>
+  const GAS_WEB_APP_URL = window.GAS_WEB_APP_URL || '';
+
+  if (!window.google || !google.script || !google.script.run) {
+    window.google = window.google || {};
+    google.script = google.script || {};
+    google.script.run = createGasApiRunner();
+  }
+
+  function createGasApiRunner(handlers = {}) {
+    let runner;
+
+    runner = new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'then') return undefined;
+
+        if (prop === 'withSuccessHandler') {
+          return function(handler) {
+            return createGasApiRunner({
+              success: handler,
+              failure: handlers.failure
+            });
+          };
+        }
+
+        if (prop === 'withFailureHandler') {
+          return function(handler) {
+            return createGasApiRunner({
+              success: handlers.success,
+              failure: handler
+            });
+          };
+        }
+
+        return function(...args) {
+          callGasApi(String(prop), args)
+            .then(function(result) {
+              if (handlers.success) handlers.success(result);
+            })
+            .catch(function(error) {
+              if (handlers.failure) {
+                handlers.failure({ message: error.message });
+                return;
+              }
+
+              alert(error.message);
+            });
+
+          return runner;
+        };
+      }
+    });
+
+    return runner;
+  }
+
+  function callGasApi(action, args) {
+    if (!GAS_WEB_APP_URL) {
+      return Promise.reject(
+        new Error('Apps Script 웹앱 URL을 index.html의 GAS_WEB_APP_URL에 입력해주세요.')
+      );
+    }
+
+    return new Promise(function(resolve, reject) {
+      const callbackName =
+        `gasCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const script = document.createElement('script');
+      const timeout = setTimeout(function() {
+        cleanup();
+        reject(new Error('Apps Script 응답 시간이 초과되었습니다.'));
+      }, 30000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        delete window[callbackName];
+
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      }
+
+      window[callbackName] = function(response) {
+        cleanup();
+
+        if (!response || response.ok !== true) {
+          reject(new Error(response && response.error
+            ? response.error
+            : 'Apps Script 요청에 실패했습니다.'
+          ));
+          return;
+        }
+
+        resolve(response.result);
+      };
+
+      const params = new URLSearchParams({
+        action,
+        payload: JSON.stringify(args),
+        callback: callbackName
+      });
+
+      script.onerror = function() {
+        cleanup();
+        reject(new Error('Apps Script 웹앱을 불러오지 못했습니다.'));
+      };
+      script.src = `${GAS_WEB_APP_URL}?${params.toString()}`;
+      document.body.appendChild(script);
+    });
+  }
+
+  let allWords = [];
+  let selectedWords = [];
+  let selectedLesson = '전체';
+  let userName = '';
+
+  let studyIndex = 0;
+  let studyTimer = null;
+  let isPaused = false;
+
+  let quizList = [];
+  let quizIndex = 0;
+  let currentQuiz = null;
+
+  let totalAttempts = 0;
+  let correctCount = 0;
+  let wrongNotes = [];
+
+  const startScreen = document.getElementById('startScreen');
+  const studyScreen = document.getElementById('studyScreen');
+  const quizSettingScreen = document.getElementById('quizSettingScreen');
+  const quizScreen = document.getElementById('quizScreen');
+  const resultScreen = document.getElementById('resultScreen');
+  const wrongNoteScreen = document.getElementById('wrongNoteScreen');
+  const minuteScreen = document.getElementById('minuteScreen');
+  const adminScreen = document.getElementById('adminScreen');
+
+  const userNameInput = document.getElementById('userNameInput');
+  const minuteSummary = document.getElementById('minuteSummary');
+  const minuteMenuBtn = document.getElementById('minuteMenuBtn');
+  const adminMenuBtn = document.getElementById('adminMenuBtn');
+
+  const lessonSelect = document.getElementById('lessonSelect');
+  const studyBtn = document.getElementById('studyBtn');
+  const quizMenuBtn = document.getElementById('quizMenuBtn');
+  const wrongNoteBtn = document.getElementById('wrongNoteBtn');
+
+  const studyHomeBtn = document.getElementById('studyHomeBtn');
+  const studyWord = document.getElementById('studyWord');
+  const studyMeaning = document.getElementById('studyMeaning');
+  const studyProgress = document.getElementById('studyProgress');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const studyQuizBtn = document.getElementById('studyQuizBtn');
+
+  const quizSettingHomeBtn = document.getElementById('quizSettingHomeBtn');
+  let selectedQuizType = 'sound-to-spelling';
+  const quizTypeButtons =  document.querySelectorAll('.quiz-type-btn');
+
+
+  const quizHomeBtn = document.getElementById('quizHomeBtn');
+  const backToQuizSettingBtn = document.getElementById('backToQuizSettingBtn');
+  const quizProgress = document.getElementById('quizProgress');
+  const quizType = document.getElementById('quizType');
+  const quizQuestion = document.getElementById('quizQuestion');
+  const replayBtn = document.getElementById('replayBtn');
+  const choiceList = document.getElementById('choiceList');
+  const resultBox = document.getElementById('resultBox');
+
+  const finalResultText = document.getElementById('finalResultText');
+  const goWrongNoteBtn = document.getElementById('goWrongNoteBtn');
+  const resultQuizBtn = document.getElementById('resultQuizBtn');
+  const resultHomeBtn = document.getElementById('resultHomeBtn');
+
+  const wrongHomeBtn = document.getElementById('wrongHomeBtn');
+  const wrongList = document.getElementById('wrongList');
+
+  const minuteHomeBtn = document.getElementById('minuteHomeBtn');
+  const minuteDetailText = document.getElementById('minuteDetailText');
+  const useMinuteInput = document.getElementById('useMinuteInput');
+  const useMinuteBtn = document.getElementById('useMinuteBtn');
+  const minuteRequestList = document.getElementById('minuteRequestList');
+
+  const adminHomeBtn = document.getElementById('adminHomeBtn');
+  const adminPasswordInput = document.getElementById('adminPasswordInput');
+  const adminLoginBtn = document.getElementById('adminLoginBtn');
+  const adminStatusText = document.getElementById('adminStatusText');
+  const adminRequestList = document.getElementById('adminRequestList');
+
+  window.addEventListener('load', init);
+
+  function init() {
+    const savedName = localStorage.getItem('englishAppUserName');
+
+    if (savedName) {
+      userNameInput.value = savedName;
+      userName = savedName;
+      loadUserSummary(userName);
+    }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        allWords = data;
+
+        if (!allWords || allWords.length === 0) {
+          lessonSelect.innerHTML = '<option>단어 없음</option>';
+          return;
+        }
+
+        loadLessons();
+      })
+      .withFailureHandler(function(error) {
+        lessonSelect.innerHTML = '<option>오류 발생</option>';
+        alert(error.message);
+      })
+      .getWords();
+  }
+
+  function requireUserName() {
+    userName = userNameInput.value.trim();
+
+    if (!userName) {
+      alert('이름을 입력해주세요.');
+      return false;
+    }
+
+    localStorage.setItem('englishAppUserName', userName);
+    return true;
+  }
+
+  function loadLessons() {
+    const lessons = [
+      '전체',
+      ...new Set(allWords.map(item => item.lesson))
+    ];
+
+    lessonSelect.innerHTML = '';
+
+    lessons.forEach(function(lesson) {
+      const option = document.createElement('option');
+      option.value = lesson;
+      option.textContent = lesson;
+      lessonSelect.appendChild(option);
+    });
+  }
+
+  function prepareSelectedWords() {
+    selectedLesson = lessonSelect.value;
+
+    selectedWords = selectedLesson === '전체'
+      ? [...allWords]
+      : allWords.filter(item => item.lesson === selectedLesson);
+
+    if (selectedWords.length < 3) {
+      alert('객관식 퀴즈를 위해 선택한 차시에 단어가 최소 3개 필요합니다.');
+      return false;
+    }
+
+    return true;
+  }
+
+  function startStudy() {
+    if (!requireUserName()) return;
+    if (!prepareSelectedWords()) return;
+
+    studyIndex = 0;
+    isPaused = false;
+
+    pauseBtn.classList.remove('hidden');
+    resumeBtn.classList.add('hidden');
+
+    showScreen('study');
+    showStudyWord();
+    startAutoStudy();
+  }
+
+  function showStudyWord() {
+  const item = selectedWords[studyIndex];
+
+  studyWord.textContent = item.english;
+  studyMeaning.textContent = item.korean;
+  studyProgress.textContent =
+    `${studyIndex + 1} / ${selectedWords.length}`;
+
+  speakStudyWord(item);
+}
+
+  function startAutoStudy() {
+    clearInterval(studyTimer);
+
+    studyTimer = setInterval(function() {
+      if (isPaused) return;
+
+      studyIndex++;
+
+      if (studyIndex >= selectedWords.length) {
+        studyIndex = 0;
+      }
+
+      showStudyWord();
+    }, 4000);
+  }
+
+  function pauseStudy() {
+    isPaused = true;
+    speechSynthesis.cancel();
+
+    pauseBtn.classList.add('hidden');
+    resumeBtn.classList.remove('hidden');
+  }
+
+  function resumeStudy() {
+    isPaused = false;
+
+    resumeBtn.classList.add('hidden');
+    pauseBtn.classList.remove('hidden');
+
+    showStudyWord();
+  }
+
+  function stopStudy() {
+    clearInterval(studyTimer);
+    studyTimer = null;
+    speechSynthesis.cancel();
+  }
+
+  function openQuizSetting() {
+  if (!requireUserName()) return;
+  if (!prepareSelectedWords()) return;
+
+  stopStudy();
+
+  quizTypeButtons.forEach(function(btn) {
+    btn.classList.remove('active');
+  });
+
+  selectedQuizType = '';
+
+  showScreen('quizSetting');
+}
+
+
+
+
+  function startQuiz() {
+
+  quizList = [];
+  quizIndex = 0;
+  totalAttempts = 0;
+  correctCount = 0;
+  wrongNotes = [];
+
+    const maxCount = Math.ceil(selectedWords.length * 1.2);
+    const baseWords = [...selectedWords];
+    shuffleArray(baseWords);
+
+    for (let i = 0; i < maxCount; i++) {
+      const word = baseWords[i % baseWords.length];
+
+      let type = selectedQuizType;
+
+      if (type === 'random') {
+        const types = [
+          'sound-to-spelling',
+          'meaning-to-spelling',
+          'spelling-to-meaning',
+          'missing-letter'
+        ];
+        shuffleArray(types);
+        type = types[0];
+      }
+
+      if (type === 'word-meaning-random') {
+        const types = [
+          'meaning-to-spelling',
+          'spelling-to-meaning'
+        ];
+        shuffleArray(types);
+        type = types[0];
+      }
+
+      quizList.push({
+        type,
+        word
+      });
+    }
+
+    shuffleArray(quizList);
+
+    showScreen('quiz');
+    showQuiz();
+  }
+
+  function showQuiz() {
+    currentQuiz = quizList[quizIndex];
+    const item = currentQuiz.word;
+
+    resultBox.textContent = '';
+    resultBox.className = 'result';
+    choiceList.innerHTML = '';
+
+    quizProgress.textContent =
+      `${quizIndex + 1} / ${quizList.length}`;
+
+    if (currentQuiz.type === 'sound-to-spelling') {
+      quizType.textContent = '듣고 맞추기';
+      quizQuestion.textContent = '소리를 듣고 맞추기';
+      replayBtn.classList.remove('hidden');
+      speakEnglish(item.english);
+      makeChoices(item, 'english');
+    }
+
+    if (currentQuiz.type === 'meaning-to-spelling') {
+      quizType.textContent = '뜻 보고 맞추기';
+      quizQuestion.textContent = item.korean;
+      replayBtn.classList.add('hidden');
+      makeChoices(item, 'english');
+    }
+
+    if (currentQuiz.type === 'spelling-to-meaning') {
+      quizType.textContent = '단어 보고 맞추기';
+      quizQuestion.textContent = item.english;
+      replayBtn.classList.add('hidden');
+      makeChoices(item, 'korean');
+    }
+
+    if (currentQuiz.type === 'missing-letter') {
+      const missingQuiz = makeMissingLetterQuiz(item.english);
+
+      quizType.textContent = '빠진 철자 맞추기';
+      quizQuestion.textContent =
+        `${missingQuiz.question} (${item.korean})`;
+      replayBtn.classList.add('hidden');
+      makeLetterChoices(missingQuiz.answer);
+    }
+  }
+
+  function makeMissingLetterQuiz(english) {
+    const letters = String(english).split('');
+    const letterIndexes = [];
+
+    letters.forEach(function(letter, index) {
+      if (/[a-z]/i.test(letter)) {
+        letterIndexes.push(index);
+      }
+    });
+
+    if (letterIndexes.length === 0) {
+      letterIndexes.push(0);
+    }
+
+    const missingIndex = letterIndexes[
+      Math.floor(Math.random() * letterIndexes.length)
+    ];
+    const answer = String(letters[missingIndex]).toLowerCase();
+
+    letters[missingIndex] = '_';
+
+    return {
+      question: letters.join(''),
+      answer
+    };
+  }
+
+  function makeLetterChoices(correctLetter) {
+    const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    const choices = [correctLetter];
+
+    shuffleArray(alphabet);
+
+    alphabet.forEach(function(letter) {
+      if (choices.length >= 4) return;
+      if (letter !== correctLetter) {
+        choices.push(letter);
+      }
+    });
+
+    shuffleArray(choices);
+
+    choices.forEach(function(letter) {
+      const button = document.createElement('button');
+      button.className = 'choice-btn';
+      button.textContent = letter.toUpperCase();
+
+      button.addEventListener('click', function() {
+        checkChoice(letter, correctLetter);
+      });
+
+      choiceList.appendChild(button);
+    });
+  }
+
+  function makeChoices(correctItem, answerKey) {
+    let choices = [correctItem];
+
+    const wrongChoices = selectedWords
+      .filter(item => item.id !== correctItem.id);
+
+    shuffleArray(wrongChoices);
+
+    choices = choices.concat(wrongChoices.slice(0, 2));
+    shuffleArray(choices);
+
+    choices.forEach(function(choice) {
+      const button = document.createElement('button');
+      button.className = 'choice-btn';
+      button.textContent = choice[answerKey];
+
+      button.addEventListener('click', function() {
+        checkChoice(choice[answerKey], correctItem[answerKey]);
+      });
+
+      choiceList.appendChild(button);
+    });
+  }
+
+  function checkChoice(userAnswer, correctAnswer) {
+    totalAttempts++;
+    disableChoices();
+
+    if (normalize(userAnswer) === normalize(correctAnswer)) {
+      correctCount++;
+      resultBox.textContent = '정답입니다!';
+      resultBox.classList.add('correct');
+    } else {
+      resultBox.textContent = '오답입니다.';
+      resultBox.classList.add('wrong');
+
+      wrongNotes.push({
+        id: currentQuiz.word.id
+      });
+    }
+
+    setTimeout(function() {
+      nextQuiz();
+    }, 900);
+  }
+
+  function disableChoices() {
+    const buttons = document.querySelectorAll('.choice-btn');
+
+    buttons.forEach(function(button) {
+      button.disabled = true;
+    });
+  }
+
+  function nextQuiz() {
+    quizIndex++;
+
+    if (quizIndex >= quizList.length) {
+      finishQuiz();
+      return;
+    }
+
+    showQuiz();
+  }
+
+  function finishQuiz() {
+    const accuracy = totalAttempts === 0
+      ? 0
+      : Math.round((correctCount / totalAttempts) * 100);
+
+    google.script.run
+      .withSuccessHandler(function(summary) {
+        finalResultText.textContent =
+          `정답률 ${accuracy}%( +${summary.lastQuizMinute || 0}분 )`;
+
+        renderMinuteSummary(summary);
+        showScreen('result');
+      })
+      .withFailureHandler(function(error) {
+        alert(error.message);
+        finalResultText.textContent =
+          `정답률 ${accuracy}%`;
+        showScreen('result');
+      })
+      .saveQuizResult({
+        userName,
+        lesson: selectedLesson,
+        accuracy,
+        wrongWords: wrongNotes
+      });
+  }
+
+  function openWrongNote() {
+    if (!requireUserName()) return;
+
+    selectedLesson = lessonSelect.value;
+
+    google.script.run
+      .withSuccessHandler(renderWrongNotes)
+      .withFailureHandler(function(error) {
+        alert(error.message);
+      })
+      .getWrongNotes(userName, selectedLesson);
+  }
+
+  function renderWrongNotes(notes) {
+    wrongList.innerHTML = '';
+
+    if (!notes || notes.length === 0) {
+      wrongList.textContent = '오답노트가 없습니다.';
+      showScreen('wrongNote');
+      return;
+    }
+
+    notes.forEach(function(item) {
+      const div = document.createElement('div');
+      div.className = 'wrong-item';
+
+      div.innerHTML = `
+        <strong>${item.english}</strong> - ${item.korean}
+        <button type="button">소리듣기</button>
+      `;
+
+      div.querySelector('button').addEventListener('click', function() {
+        speakEnglish(item.english);
+      });
+
+      wrongList.appendChild(div);
+    });
+
+    showScreen('wrongNote');
+  }
+
+  function loadUserSummary(name) {
+    google.script.run
+      .withSuccessHandler(renderMinuteSummary)
+      .getUserSummary(name);
+  }
+
+  function renderMinuteSummary(summary) {
+    const earnedMinute = summary.earnedMinute || 0;
+    const usedMinute = summary.usedMinute || 0;
+    const availableMinute = summary.availableMinute || 0;
+    const todayMinute = summary.todayMinute || 0;
+
+    const text = `현재 보유: ${availableMinute}분 · 오늘 누적: ${todayMinute}분`;
+
+    minuteSummary.textContent = text;
+    minuteDetailText.textContent =
+      `오늘 누적: ${todayMinute}분
+      적립: ${earnedMinute}분
+      - 사용: ${usedMinute}분
+      = 잔여: ${availableMinute}분`;
+  }
+
+  function openMinuteScreen() {
+    if (!requireUserName()) return;
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        renderMinuteScreenData(data);
+        showScreen('minute');
+      })
+      .withFailureHandler(function(error) {
+        alert(error.message);
+      })
+      .getMinuteScreenData(userName);
+  }
+
+  function useMinute() {
+    if (!requireUserName()) return;
+
+    const value = Number(useMinuteInput.value);
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        alert('사용 신청이 접수되었습니다. 관리자 승인 후 차감됩니다.');
+        useMinuteInput.value = '';
+        renderMinuteScreenData(data);
+      })
+      .withFailureHandler(function(error) {
+        alert(error.message);
+      })
+      .useMinute({
+        userName,
+        useMinute: value
+      });
+  }
+
+  function renderMinuteScreenData(data) {
+    renderMinuteSummary(data.summary);
+    renderMinuteRequests(data.requests);
+  }
+
+  function renderMinuteRequests(requests) {
+    minuteRequestList.innerHTML = '';
+
+    if (!requests || requests.length === 0) {
+      minuteRequestList.textContent = '최근 3일 신청 내역이 없습니다.';
+      return;
+    }
+
+    requests.forEach(function(request) {
+      const row = document.createElement('div');
+      row.className = 'request-row';
+
+      const date = document.createElement('span');
+      date.textContent = request.date;
+
+      const minute = document.createElement('span');
+      minute.textContent = `${request.minute}분`;
+
+      const status = document.createElement('span');
+      status.className = `request-status ${getRequestStatusClass(request.status)}`;
+      status.textContent = request.status;
+
+      row.appendChild(date);
+      row.appendChild(minute);
+      row.appendChild(status);
+      minuteRequestList.appendChild(row);
+    });
+  }
+
+  function getRequestStatusClass(status) {
+    if (status === '승인') return 'approved';
+    if (status === '거절') return 'rejected';
+    return 'pending';
+  }
+
+  function loadAdminRequests() {
+    const password = adminPasswordInput.value.trim();
+
+    if (!password) {
+      alert('관리자 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(renderAdminRequests)
+      .withFailureHandler(function(error) {
+        alert(error.message);
+      })
+      .getAdminMinuteRequests(password);
+  }
+
+  function renderAdminRequests(requests) {
+    adminRequestList.innerHTML = '';
+
+    if (!requests || requests.length === 0) {
+      adminStatusText.textContent = '대기 중인 신청이 없습니다.';
+      return;
+    }
+
+    adminStatusText.textContent = `대기 중인 신청 ${requests.length}건`;
+
+    requests.forEach(function(request) {
+      const row = document.createElement('div');
+      row.className = 'admin-request-row';
+
+      const info = document.createElement('div');
+      info.className = 'admin-request-info';
+      info.textContent =
+        `${request.date} · ${request.userName} · ${request.minute}분`;
+
+      const actions = document.createElement('div');
+      actions.className = 'admin-actions';
+
+      const approveBtn = document.createElement('button');
+      approveBtn.type = 'button';
+      approveBtn.textContent = '승인';
+      approveBtn.addEventListener('click', function() {
+        processAdminRequest(request.id, '승인');
+      });
+
+      const rejectBtn = document.createElement('button');
+      rejectBtn.type = 'button';
+      rejectBtn.className = 'secondary';
+      rejectBtn.textContent = '거절';
+      rejectBtn.addEventListener('click', function() {
+        processAdminRequest(request.id, '거절');
+      });
+
+      actions.appendChild(approveBtn);
+      actions.appendChild(rejectBtn);
+      row.appendChild(info);
+      row.appendChild(actions);
+      adminRequestList.appendChild(row);
+    });
+  }
+
+  function processAdminRequest(requestId, status) {
+    const password = adminPasswordInput.value.trim();
+
+    if (!password) {
+      alert('관리자 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(requests) {
+        alert('처리되었습니다.');
+        renderAdminRequests(requests);
+      })
+      .withFailureHandler(function(error) {
+        alert(error.message);
+      })
+      .adminProcessMinuteRequest({
+        password,
+        requestId,
+        status
+      });
+  }
+
+  function replaySound() {
+    if (!currentQuiz) return;
+    speakEnglish(currentQuiz.word.english);
+  }
+
+  function speakEnglish(text) {
+    speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.85;
+
+    speechSynthesis.speak(utterance);
+  }
+function speakStudyWord(item) {
+  speechSynthesis.cancel();
+
+  const englishVoice = new SpeechSynthesisUtterance(item.english);
+  englishVoice.lang = 'en-US';
+  englishVoice.rate = 0.85;
+
+  const koreanVoice = new SpeechSynthesisUtterance(item.korean);
+  koreanVoice.lang = 'ko-KR';
+  koreanVoice.rate = 0.9;
+
+  englishVoice.onend = function() {
+    speechSynthesis.speak(koreanVoice);
+  };
+
+  speechSynthesis.speak(englishVoice);
+}
+
+  function normalize(text) {
+    return String(text)
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
+
+  function shuffleArray(array) {
+    array.sort(function() {
+      return Math.random() - 0.5;
+    });
+  }
+
+  function showScreen(name) {
+    startScreen.classList.remove('active');
+    studyScreen.classList.remove('active');
+    quizSettingScreen.classList.remove('active');
+    quizScreen.classList.remove('active');
+    resultScreen.classList.remove('active');
+    wrongNoteScreen.classList.remove('active');
+    minuteScreen.classList.remove('active');
+    adminScreen.classList.remove('active');
+
+    if (name === 'start') startScreen.classList.add('active');
+    if (name === 'study') studyScreen.classList.add('active');
+    if (name === 'quizSetting') quizSettingScreen.classList.add('active');
+    if (name === 'quiz') quizScreen.classList.add('active');
+    if (name === 'result') resultScreen.classList.add('active');
+    if (name === 'wrongNote') wrongNoteScreen.classList.add('active');
+    if (name === 'minute') minuteScreen.classList.add('active');
+    if (name === 'admin') adminScreen.classList.add('active');
+  }
+
+  userNameInput.addEventListener('change', function() {
+    const name = userNameInput.value.trim();
+
+    if (name) {
+      userName = name;
+      localStorage.setItem('englishAppUserName', name);
+      loadUserSummary(name);
+    }
+  });
+
+  studyBtn.addEventListener('click', startStudy);
+  quizMenuBtn.addEventListener('click', openQuizSetting);
+  wrongNoteBtn.addEventListener('click', openWrongNote);
+  minuteMenuBtn.addEventListener('click', openMinuteScreen);
+  adminMenuBtn.addEventListener('click', function() {
+    adminStatusText.textContent = '비밀번호를 입력해주세요.';
+    adminRequestList.innerHTML = '';
+    showScreen('admin');
+  });
+
+  studyHomeBtn.addEventListener('click', function() {
+    stopStudy();
+    showScreen('start');
+    if (userName) loadUserSummary(userName);
+  });
+
+  pauseBtn.addEventListener('click', pauseStudy);
+  resumeBtn.addEventListener('click', resumeStudy);
+  studyQuizBtn.addEventListener('click', function() {
+    stopStudy();
+    showScreen('quizSetting');
+  });
+
+  quizSettingHomeBtn.addEventListener('click', function() {
+    showScreen('start');
+  });
+
+  quizHomeBtn.addEventListener('click', function() {
+    speechSynthesis.cancel();
+    showScreen('start');
+    if (userName) loadUserSummary(userName);
+  });
+
+  backToQuizSettingBtn.addEventListener('click', function() {
+    speechSynthesis.cancel();
+    showScreen('quizSetting');
+  });
+
+  replayBtn.addEventListener('click', replaySound);
+
+  goWrongNoteBtn.addEventListener('click', openWrongNote);
+
+  resultQuizBtn.addEventListener('click', function() {
+    showScreen('quizSetting');
+  });
+
+  resultHomeBtn.addEventListener('click', function() {
+    showScreen('start');
+    if (userName) loadUserSummary(userName);
+  });
+
+  wrongHomeBtn.addEventListener('click', function() {
+    showScreen('start');
+    if (userName) loadUserSummary(userName);
+  });
+
+  minuteHomeBtn.addEventListener('click', function() {
+    showScreen('start');
+    if (userName) loadUserSummary(userName);
+  });
+
+  useMinuteBtn.addEventListener('click', useMinute);
+  adminHomeBtn.addEventListener('click', function() {
+    showScreen('start');
+    if (userName) loadUserSummary(userName);
+  });
+  adminLoginBtn.addEventListener('click', loadAdminRequests);
+  
+  quizTypeButtons.forEach(function(button) {
+  button.addEventListener('click', function() {
+    quizTypeButtons.forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+
+    button.classList.add('active');
+    selectedQuizType = button.dataset.type;
+
+    startQuiz();
+  });
+});
+</script>

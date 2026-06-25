@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="googlebot" content="noindex,nofollow,noarchive,nosnippet,noimageindex">
+  <meta name="bingbot" content="noindex,nofollow,noarchive,nosnippet">
+  <title>teatea study</title>
+  <script>
+    window.GAS_WEB_APP_URL = '';
+  </script>
+  <script>
+    fetch('Style.html')
+      .then(function(response) {
+        return response.text();
+      })
+      .then(function(styleHtml) {
+        document.head.insertAdjacentHTML('beforeend', styleHtml);
+      });
+  </script>
+</head>
+
+<body>
+  <main class="app">
+
+    <section id="startScreen" class="screen active">
+      <div class="start-admin-bar">
+        <button id="adminMenuBtn" class="secondary admin-link-btn">관리자</button>
+      </div>
+
+      <h1>teatea study</h1>
+
+      <label for="userNameInput">이름</label>
+      <input id="userNameInput" type="text" placeholder="이름을 입력하세요">
+
+      <label for="lessonSelect">학습 차시 선택</label>
+      <select id="lessonSelect">
+        <option>불러오는 중...</option>
+      </select>
+
+      <div class="menu-grid">
+        <button id="studyBtn">학습</button>
+        <button id="quizMenuBtn">퀴즈</button>
+        <button id="wrongNoteBtn" class="secondary">오답노트</button>
+      </div>
+
+      <div class="summary-box">
+        <h3>현재 현황</h3>
+        <p id="minuteSummary">이름을 입력하면 보유분을 볼 수 있습니다.</p>
+      </div>
+
+      <button id="minuteMenuBtn" class="secondary">분 관리</button>
+    </section>
+
+    <section id="studyScreen" class="screen">
+      <div class="top">
+        <button id="studyHomeBtn" class="secondary">처음으로</button>
+        <p id="studyProgress"></p>
+      </div>
+
+      <div class="card">
+        <div id="studyWord" class="word"></div>
+        <div id="studyMeaning" class="meaning"></div>
+      </div>
+
+      <button id="pauseBtn" class="secondary">일시정지</button>
+      <button id="resumeBtn" class="hidden">다시 재생</button>
+      <button id="studyQuizBtn">퀴즈</button>
+    </section>
+
+    <section id="quizSettingScreen" class="screen">
+      <div class="top">
+        <button id="quizSettingHomeBtn" class="secondary">처음으로</button>
+      </div>
+
+      <h1>퀴즈 선택</h1>
+      <label>퀴즈 형태 선택</label>
+
+      <div class="quiz-type-buttons">
+        <button type="button" class="quiz-type-btn" data-type="sound-to-spelling">
+          듣고 맞추기
+        </button>
+
+        <button type="button" class="quiz-type-btn" data-type="word-meaning-random">
+          단어/뜻 맞추기
+        </button>
+        <button type="button" class="quiz-type-btn" data-type="missing-letter">
+        빠진 철자 맞추기
+        </button>
+
+        <button type="button" class="quiz-type-btn" data-type="random">
+          랜덤
+        </button>
+      </div>
+    </section>
+
+    <section id="quizScreen" class="screen">
+      <div class="top">
+        <div class="top-buttons">
+          <button id="quizHomeBtn" class="secondary">처음으로</button>
+<button id="backToQuizSettingBtn" class="secondary">퀴즈변경</button>
+        </div>
+        <p id="quizProgress"></p>
+      </div>
+
+      <div class="quiz-card">
+        <div id="quizType" class="quiz-type"></div>
+        <div id="quizQuestion" class="quiz-question"></div>
+
+        <button id="replayBtn" class="sub-btn">소리 다시 듣기</button>
+
+        <div id="resultBox" class="result"></div>
+        <div id="choiceList" class="choice-list"></div>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <h1>퀴즈 완료</h1>
+
+      <div class="summary-box">
+        <p id="finalResultText"></p>
+      </div>
+
+      <button id="goWrongNoteBtn">오답노트 보기</button>
+      <button id="resultQuizBtn">퀴즈응시</button>
+      <button id="resultHomeBtn" class="secondary">처음으로</button>
+    </section>
+
+    <section id="wrongNoteScreen" class="screen">
+      <div class="top">
+        <button id="wrongHomeBtn" class="secondary">처음으로</button>
+      </div>
+
+      <h1>오답노트</h1>
+      <div id="wrongList" class="summary-box"></div>
+    </section>
+
+    <section id="minuteScreen" class="screen">
+      <div class="top">
+        <button id="minuteHomeBtn" class="secondary">처음으로</button>
+      </div>
+
+      <h1>분 관리</h1>
+
+      <div class="summary-box">
+        <p id="minuteDetailText"></p>
+      </div>
+
+      <label for="useMinuteInput">사용할 분</label>
+      <input id="useMinuteInput" type="number" min="1" placeholder="사용할 분 입력">
+
+      <button id="useMinuteBtn">사용 신청</button>
+
+      <div class="summary-box request-box">
+        <h3>신청 내역</h3>
+        <div class="request-header">
+          <span>신청일자</span>
+          <span>분</span>
+          <span>승인여부</span>
+        </div>
+        <div id="minuteRequestList" class="request-list">
+          최근 3일 신청 내역이 없습니다.
+        </div>
+      </div>
+    </section>
+
+    <section id="adminScreen" class="screen">
+      <div class="top">
+        <button id="adminHomeBtn" class="secondary">처음으로</button>
+      </div>
+
+      <h1>관리자 승인</h1>
+
+      <label for="adminPasswordInput">관리자 비밀번호</label>
+      <input id="adminPasswordInput" type="password" placeholder="비밀번호 입력">
+      <button id="adminLoginBtn">신청 내역 불러오기</button>
+
+      <div class="summary-box request-box">
+        <h3>대기 신청</h3>
+        <p id="adminStatusText">비밀번호를 입력해주세요.</p>
+        <div id="adminRequestList" class="admin-request-list"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    fetch('Script.html')
+      .then(function(response) {
+        return response.text();
+      })
+      .then(function(scriptHtml) {
+        const code = scriptHtml
+          .replace(/^\s*<script[^>]*>\s*/i, '')
+          .replace(/\s*<\/script>\s*$/i, '');
+        const script = document.createElement('script');
+        script.textContent = code;
+        document.body.appendChild(script);
+      });
+  </script>
+</body>
+</html>
