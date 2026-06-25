@@ -186,7 +186,19 @@
   const adminStatusText = document.getElementById('adminStatusText');
   const adminRequestList = document.getElementById('adminRequestList');
 
-  window.addEventListener('load', init);
+  let didInit = false;
+
+  function runInit() {
+    if (didInit) return;
+    didInit = true;
+    init();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runInit);
+  } else {
+    runInit();
+  }
 
   function init() {
     const savedName = localStorage.getItem('englishAppUserName');
