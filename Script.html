@@ -209,22 +209,25 @@
       loadUserSummary(userName);
     }
 
-    google.script.run
-      .withSuccessHandler(function(data) {
-        allWords = data;
+    loadLessonOptions();
+  }
 
-        if (!allWords || allWords.length === 0) {
+  function loadLessonOptions() {
+    google.script.run
+      .withSuccessHandler(function(lessons) {
+        if (!lessons || lessons.length === 0) {
           lessonSelect.innerHTML = '<option>단어 없음</option>';
           return;
         }
 
-        loadLessons();
+        loadLessons(lessons);
       })
       .withFailureHandler(function(error) {
-        lessonSelect.innerHTML = '<option>오류 발생</option>';
+        lessonSelect.innerHTML =
+          `<option>${error.message || '차시 로딩 오류'}</option>`;
         alert(error.message);
       })
-      .getWords();
+      .getLessons();
   }
 
   function requireUserName() {
@@ -239,12 +242,7 @@
     return true;
   }
 
-  function loadLessons() {
-    const lessons = [
-      '전체',
-      ...new Set(allWords.map(item => item.lesson))
-    ];
-
+  function loadLessons(lessons) {
     lessonSelect.innerHTML = '';
 
     lessons.forEach(function(lesson) {
@@ -256,12 +254,6 @@
   }
 
   function prepareSelectedWords() {
-    selectedLesson = lessonSelect.value;
-
-    selectedWords = selectedLesson === '전체'
-      ? [...allWords]
-      : allWords.filter(item => item.lesson === selectedLesson);
-
     if (selectedWords.length < 3) {
       alert('객관식 퀴즈를 위해 선택한 차시에 단어가 최소 3개 필요합니다.');
       return false;
@@ -270,19 +262,44 @@
     return true;
   }
 
+  function loadSelectedWords(callback) {
+    selectedLesson = lessonSelect.value;
+
+    if (!selectedLesson || selectedLesson === '불러오는 중...') {
+      alert('학습 차시를 먼저 불러와주세요.');
+      loadLessonOptions();
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        selectedWords = data || [];
+        allWords = selectedWords;
+
+        if (!prepareSelectedWords()) return;
+
+        callback();
+      })
+      .withFailureHandler(function(error) {
+        alert(error.message);
+      })
+      .getWordsByLesson(selectedLesson);
+  }
+
   function startStudy() {
     if (!requireUserName()) return;
-    if (!prepareSelectedWords()) return;
 
-    studyIndex = 0;
-    isPaused = false;
+    loadSelectedWords(function() {
+      studyIndex = 0;
+      isPaused = false;
 
-    pauseBtn.classList.remove('hidden');
-    resumeBtn.classList.add('hidden');
+      pauseBtn.classList.remove('hidden');
+      resumeBtn.classList.add('hidden');
 
-    showScreen('study');
-    showStudyWord();
-    startAutoStudy();
+      showScreen('study');
+      showStudyWord();
+      startAutoStudy();
+    });
   }
 
   function showStudyWord() {
@@ -337,17 +354,18 @@
 
   function openQuizSetting() {
   if (!requireUserName()) return;
-  if (!prepareSelectedWords()) return;
 
-  stopStudy();
+  loadSelectedWords(function() {
+    stopStudy();
 
-  quizTypeButtons.forEach(function(btn) {
-    btn.classList.remove('active');
+    quizTypeButtons.forEach(function(btn) {
+      btn.classList.remove('active');
+    });
+
+    selectedQuizType = '';
+
+    showScreen('quizSetting');
   });
-
-  selectedQuizType = '';
-
-  showScreen('quizSetting');
 }
 
 
