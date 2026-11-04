@@ -111,7 +111,7 @@
   let allWords = [];
   let selectedWords = [];
   let selectedLesson = '전체';
-  let userName = '';
+  let userName = window.SINGLE_USER_NAME || '태태';
 
   let studyIndex = 0;
   let studyTimer = null;
@@ -140,6 +140,7 @@
   const adminMenuBtn = document.getElementById('adminMenuBtn');
 
   const lessonSelect = document.getElementById('lessonSelect');
+  const lessonRetryBtn = document.getElementById('lessonRetryBtn');
   const studyBtn = document.getElementById('studyBtn');
   const quizMenuBtn = document.getElementById('quizMenuBtn');
   const wrongNoteBtn = document.getElementById('wrongNoteBtn');
@@ -151,6 +152,7 @@
   const pauseBtn = document.getElementById('pauseBtn');
   const resumeBtn = document.getElementById('resumeBtn');
   const studyQuizBtn = document.getElementById('studyQuizBtn');
+  const studySpeakBtn = document.getElementById('studySpeakBtn');
 
   const quizSettingHomeBtn = document.getElementById('quizSettingHomeBtn');
   let selectedQuizType = 'sound-to-spelling';
@@ -201,18 +203,15 @@
   }
 
   function init() {
-    const savedName = localStorage.getItem('englishAppUserName');
-
-    if (savedName) {
-      userNameInput.value = savedName;
-      userName = savedName;
-      loadUserSummary(userName);
-    }
-
+    userNameInput.value = userName;
+    loadUserSummary(userName);
     loadLessonOptions();
   }
 
   function loadLessonOptions() {
+    lessonSelect.innerHTML = '<option>불러오는 중...</option>';
+    lessonSelect.disabled = true;
+    if (lessonRetryBtn) lessonRetryBtn.classList.add('hidden');
     google.script.run
       .withSuccessHandler(function(lessons) {
         if (!lessons || lessons.length === 0) {
@@ -221,25 +220,31 @@
         }
 
         loadLessons(lessons);
+        lessonSelect.disabled = false;
       })
       .withFailureHandler(function(error) {
-        lessonSelect.innerHTML =
-          `<option>${error.message || '차시 로딩 오류'}</option>`;
-        alert(error.message);
+        lessonSelect.innerHTML = '<option>차시를 불러오지 못했어요</option>';
+        lessonSelect.disabled = true;
+        if (lessonRetryBtn) lessonRetryBtn.classList.remove('hidden');
+        showToast('연결을 확인하고 다시 눌러 주세요.');
       })
       .getLessons();
   }
 
   function requireUserName() {
-    userName = userNameInput.value.trim();
-
-    if (!userName) {
-      alert('이름을 입력해주세요.');
-      return false;
-    }
-
-    localStorage.setItem('englishAppUserName', userName);
+    userName = window.SINGLE_USER_NAME || '태태';
     return true;
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(function() {
+      toast.classList.remove('show');
+    }, 2400);
   }
 
   function loadLessons(lessons) {
@@ -910,6 +915,7 @@ function speakStudyWord(item) {
   studyBtn.addEventListener('click', startStudy);
   quizMenuBtn.addEventListener('click', openQuizSetting);
   wrongNoteBtn.addEventListener('click', openWrongNote);
+  if (lessonRetryBtn) lessonRetryBtn.addEventListener('click', loadLessonOptions);
   minuteMenuBtn.addEventListener('click', openMinuteScreen);
   adminMenuBtn.addEventListener('click', function() {
     adminStatusText.textContent = '비밀번호를 입력해주세요.';
@@ -925,6 +931,11 @@ function speakStudyWord(item) {
 
   pauseBtn.addEventListener('click', pauseStudy);
   resumeBtn.addEventListener('click', resumeStudy);
+  if (studySpeakBtn) {
+    studySpeakBtn.addEventListener('click', function() {
+      if (selectedWords[studyIndex]) speakStudyWord(selectedWords[studyIndex]);
+    });
+  }
   studyQuizBtn.addEventListener('click', function() {
     stopStudy();
     showScreen('quizSetting');
