@@ -124,6 +124,7 @@
   let totalAttempts = 0;
   let correctCount = 0;
   let wrongNotes = [];
+  let activePlanLessons = [];
 
   const startScreen = document.getElementById('startScreen');
   const studyScreen = document.getElementById('studyScreen');
@@ -205,7 +206,88 @@
   function init() {
     userNameInput.value = userName;
     loadUserSummary(userName);
+    loadActivePlan();
     loadLessonOptions();
+  }
+
+  function loadActivePlan() {
+    google.script.run
+      .withSuccessHandler(function(data) {
+        activePlanLessons = data && data.plan && data.plan.active
+          ? (data.plan.lessons || []) : [];
+        if (data && data.plan) renderPlanSummary(data.plan);
+        if (data && data.attendance) renderAttendance(data.attendance);
+        applyActivePlanSelection();
+      })
+      .withFailureHandler(function() {})
+      .getDashboardData(userName);
+  }
+
+  function applyActivePlanSelection() {
+    if (!activePlanLessons.length || !lessonSelect.options.length) return;
+    const label = document.getElementById('activePlanLabel');
+    if (activePlanLessons.length === 1) {
+      const target = activePlanLessons[0];
+      const exists = [...lessonSelect.options].some(function(option) {
+        return option.value === target;
+      });
+      if (exists) lessonSelect.value = target;
+    } else {
+      let planOption = [...lessonSelect.options].find(function(option) {
+        return option.value === '__PLAN__';
+      });
+      if (!planOption) {
+        planOption = document.createElement('option');
+        planOption.value = '__PLAN__';
+        lessonSelect.insertBefore(planOption, lessonSelect.firstChild);
+      }
+      planOption.textContent = `이번 시험: ${activePlanLessons.join(', ')}`;
+      lessonSelect.value = '__PLAN__';
+    }
+    if (label) {
+      label.textContent = `시험 범위가 자동 선택됐어요: ${activePlanLessons.join(', ')}`;
+      label.classList.remove('hidden');
+    }
+  }
+
+  function renderPlanSummary(plan) {
+    const card = document.getElementById('studyPlanCard');
+    if (!card || !plan || !plan.active) return;
+    card.classList.remove('hidden');
+    document.getElementById('planName').textContent = plan.planName || '이번 시험 준비';
+    document.getElementById('planLessons').textContent = `시험 범위: ${(plan.lessons || []).join(', ')}`;
+    document.getElementById('planDaysLeft').textContent = plan.daysLeft > 0 ? `D-${plan.daysLeft}` : plan.daysLeft === 0 ? '오늘 시험!' : '시험 완료';
+    document.getElementById('dailyGoalText').textContent = `${plan.todayCorrect || 0} / ${plan.dailyGoalCount || 0}단어`;
+    const rate = plan.dailyGoalCount ? Math.min(100, Math.round((plan.todayCorrect || 0) / plan.dailyGoalCount * 100)) : 0;
+    document.getElementById('dailyGoalBar').style.width = `${rate}%`;
+    document.getElementById('masteryText').textContent = `외웠어요 ${plan.masteredCount || 0} / ${plan.totalWords || 0}단어`;
+  }
+
+  function renderAttendance(attendance) {
+    const list = document.getElementById('weeklyAttendance');
+    if (!list || !attendance) return;
+    list.innerHTML = '';
+    (attendance.week || []).forEach(function(day) {
+      const item = document.createElement('div');
+      item.className = `attendance-day${day.done ? ' done' : ''}${day.today ? ' today' : ''}`;
+      item.innerHTML = `<span>${day.label}</span><i>${day.done ? '✓' : '·'}</i>`;
+      list.appendChild(item);
+    });
+    const streakText = document.getElementById('streakText');
+    const hint = document.getElementById('attendanceHint');
+    if (attendance.milestoneBonus && attendance.milestoneBonus.minute > 0) {
+      streakText.textContent = `${attendance.streak}일 연속 출석! 대단해요.`;
+      hint.textContent = `보상으로 +${attendance.milestoneBonus.minute}분을 받았어요! 🎁`;
+    } else if (attendance.todayDone) {
+      streakText.textContent = `${attendance.streak}일째 연속 출석 중!`;
+      hint.textContent = `${attendance.totalAttendance}번째 출석이에요. 태태님, 오늘도 멋져요!`;
+    } else if (attendance.streak > 0) {
+      streakText.textContent = `${attendance.streak}일째 연속 출석 중!`;
+      hint.textContent = `${attendance.totalAttendance + 1}번째 출석을 향해, 태태님 힘내세요!`;
+    } else {
+      streakText.textContent = '오늘부터 새로운 기록을 시작해요!';
+      hint.textContent = '퀴즈 50점 이상이면 자동으로 출석해요.';
+    }
   }
 
   function loadLessonOptions() {
@@ -256,6 +338,7 @@
       option.textContent = lesson;
       lessonSelect.appendChild(option);
     });
+    applyActivePlanSelection();
   }
 
   function prepareSelectedWords() {
@@ -276,10 +359,14 @@
       return;
     }
 
-    google.script.run
+    const method = selectedLesson === '__PLAN__' ? 'getWords' : 'getWordsByLesson';
+    const runner = google.script.run
       .withSuccessHandler(function(data) {
-        selectedWords = data || [];
+        selectedWords = selectedLesson === '__PLAN__'
+          ? (data || []).filter(function(word) { return activePlanLessons.includes(word.lesson); })
+          : (data || []);
         allWords = selectedWords;
+        if (selectedLesson === '__PLAN__') selectedLesson = activePlanLessons.join(', ');
 
         if (!prepareSelectedWords()) return;
 
@@ -287,8 +374,9 @@
       })
       .withFailureHandler(function(error) {
         alert(error.message);
-      })
-      .getWordsByLesson(selectedLesson);
+      });
+    if (method === 'getWords') runner.getWords();
+    else runner.getWordsByLesson(selectedLesson);
   }
 
   function startStudy() {
@@ -398,7 +486,8 @@
           'sound-to-spelling',
           'meaning-to-spelling',
           'spelling-to-meaning',
-          'missing-letter'
+          'missing-letter',
+          'word-block'
         ];
         shuffleArray(types);
         type = types[0];
@@ -467,6 +556,53 @@
       replayBtn.classList.add('hidden');
       makeLetterChoices(missingQuiz.answer);
     }
+
+    if (currentQuiz.type === 'word-block') {
+      quizType.textContent = '글자 블록 맞추기';
+      quizQuestion.textContent = item.korean;
+      replayBtn.classList.remove('hidden');
+      makeWordBlockQuiz(item.english);
+    }
+  }
+
+  function makeWordBlockQuiz(english) {
+    const answer = String(english).replace(/[^a-z]/gi, '').toLowerCase();
+    const letters = answer.split('').map(function(letter, index) {
+      return { id: `${index}-${letter}`, letter };
+    });
+    shuffleArray(letters);
+
+    const answerArea = document.createElement('div');
+    answerArea.className = 'block-answer-area';
+    answerArea.setAttribute('aria-label', '완성한 단어');
+    const sourceArea = document.createElement('div');
+    sourceArea.className = 'block-source-area';
+    sourceArea.setAttribute('aria-label', '사용할 글자');
+    const help = document.createElement('p');
+    help.className = 'block-help';
+    help.textContent = '글자를 순서대로 눌러 단어를 완성해요.';
+
+    letters.forEach(function(item) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'letter-block';
+      button.textContent = item.letter.toUpperCase();
+      button.dataset.blockId = item.id;
+      button.addEventListener('click', function() {
+        const movingToAnswer = button.parentNode === sourceArea;
+        (movingToAnswer ? answerArea : sourceArea).appendChild(button);
+        if (answerArea.children.length === letters.length) {
+          const userAnswer = [...answerArea.children]
+            .map(function(block) { return block.textContent; }).join('');
+          checkChoice(userAnswer, answer);
+        }
+      });
+      sourceArea.appendChild(button);
+    });
+
+    choiceList.appendChild(help);
+    choiceList.appendChild(answerArea);
+    choiceList.appendChild(sourceArea);
   }
 
   function makeMissingLetterQuiz(english) {
@@ -554,10 +690,10 @@
 
     if (normalize(userAnswer) === normalize(correctAnswer)) {
       correctCount++;
-      resultBox.textContent = '정답입니다!';
+      resultBox.textContent = '정답이에요! 잘했어요 🎉';
       resultBox.classList.add('correct');
     } else {
-      resultBox.textContent = '오답입니다.';
+      resultBox.textContent = `아쉬워요. 정답은 ${correctAnswer}예요.`;
       resultBox.classList.add('wrong');
 
       wrongNotes.push({
@@ -571,7 +707,7 @@
   }
 
   function disableChoices() {
-    const buttons = document.querySelectorAll('.choice-btn');
+    const buttons = document.querySelectorAll('.choice-btn, .letter-block');
 
     buttons.forEach(function(button) {
       button.disabled = true;
@@ -596,10 +732,14 @@
 
     google.script.run
       .withSuccessHandler(function(summary) {
-        finalResultText.textContent =
-          `정답률 ${accuracy}%( +${summary.lastQuizMinute || 0}분 )`;
+        const bonus = summary.attendance && summary.attendance.milestoneBonus;
+        finalResultText.textContent = bonus && bonus.minute > 0
+          ? `${summary.attendance.streak}일 연속 출석! 대단해요. 보상으로 +${bonus.minute}분을 받았어요!`
+          : `정답률 ${accuracy}% · +${summary.lastQuizMinute || 0}분`;
 
         renderMinuteSummary(summary);
+        if (summary.attendance) renderAttendance(summary.attendance);
+        if (summary.plan) renderPlanSummary(summary.plan);
         showScreen('result');
       })
       .withFailureHandler(function(error) {
@@ -608,11 +748,13 @@
           `정답률 ${accuracy}%`;
         showScreen('result');
       })
-      .saveQuizResult({
+      .saveQuizResultEnhanced({
         userName,
         lesson: selectedLesson,
         accuracy,
-        wrongWords: wrongNotes
+        wrongWords: wrongNotes,
+        correctWordIds: quizList.map(function(quiz) { return quiz.word.id; })
+          .filter(function(id) { return !wrongNotes.some(function(item) { return Number(item.id) === Number(id); }); })
       });
   }
 
@@ -659,8 +801,8 @@
 
   function loadUserSummary(name) {
     google.script.run
-      .withSuccessHandler(renderMinuteSummary)
-      .getUserSummary(name);
+      .withSuccessHandler(function(data) { renderMinuteSummary(data.summary || data); })
+      .getDashboardData(name);
   }
 
   function renderMinuteSummary(summary) {
@@ -668,15 +810,16 @@
     const usedMinute = summary.usedMinute || 0;
     const availableMinute = summary.availableMinute || 0;
     const todayMinute = summary.todayMinute || 0;
+    const pendingMinute = summary.pendingMinute || 0;
+    const spendableMinute = summary.spendableMinute !== undefined ? summary.spendableMinute : availableMinute;
 
-    const text = `현재 보유: ${availableMinute}분 · 오늘 누적: ${todayMinute}분`;
+    const text = `사용 가능 ${spendableMinute}분 · 오늘 적립 ${todayMinute}분 · 승인 대기 ${pendingMinute}분`;
 
     minuteSummary.textContent = text;
     minuteDetailText.textContent =
-      `오늘 누적: ${todayMinute}분
-      적립: ${earnedMinute}분
-      - 사용: ${usedMinute}분
-      = 잔여: ${availableMinute}분`;
+      `전체 잔여 ${availableMinute}분
+      승인 대기 ${pendingMinute}분
+      지금 신청 가능 ${spendableMinute}분`;
   }
 
   function openMinuteScreen() {
@@ -690,7 +833,7 @@
       .withFailureHandler(function(error) {
         alert(error.message);
       })
-      .getMinuteScreenData(userName);
+      .getEnhancedMinuteScreenData(userName);
   }
 
   function useMinute() {
@@ -707,7 +850,7 @@
       .withFailureHandler(function(error) {
         alert(error.message);
       })
-      .useMinute({
+      .useMinuteEnhanced({
         userName,
         useMinute: value
       });
@@ -766,7 +909,7 @@
       .withFailureHandler(function(error) {
         alert(error.message);
       })
-      .getAdminMinuteRequests(password);
+      .getAdminMinuteRequestsSecure(password);
   }
 
   function renderAdminRequests(requests) {
@@ -823,14 +966,14 @@
     }
 
     google.script.run
-      .withSuccessHandler(function(requests) {
+      .withSuccessHandler(function(result) {
         alert('처리되었습니다.');
-        renderAdminRequests(requests);
+        renderAdminRequests(Array.isArray(result) ? result : (result.requests || []));
       })
       .withFailureHandler(function(error) {
         alert(error.message);
       })
-      .adminProcessMinuteRequest({
+      .adminProcessMinuteRequestEnhanced({
         password,
         requestId,
         status
