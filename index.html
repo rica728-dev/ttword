@@ -7,7 +7,7 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>티티 영단어</title>
   <script>
-    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzC0seunie9sLC8zDFcFfRmChK1rgn0-9U3vpL1Tb8WvWVV-MXzkv2tqFMV3OAD5M92oQ/exec';
+    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKrpWwOYPu2XBMud-PZ4wFniVbHH-Yx5H_-vVFQrXmRqNlQW7S_fTGcHSinKjnrjkQxA/exec';
     window.SINGLE_USER_NAME = '태태';
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -25,11 +25,24 @@
       </header>
 
       <input id="userNameInput" type="hidden" value="태태">
+      <section id="studyPlanCard" class="plan-card hidden">
+        <div class="plan-top"><span>🎯 이번 시험 준비</span><strong id="planDaysLeft"></strong></div>
+        <h2 id="planName"></h2><p id="planLessons"></p>
+        <div class="goal-row"><span>오늘의 목표</span><strong id="dailyGoalText"></strong></div>
+        <div class="progress-track"><span id="dailyGoalBar"></span></div>
+        <p id="masteryText" class="plan-caption"></p>
+      </section>
+      <section class="attendance-card">
+        <div class="attendance-head"><div><small>이번 주 출석</small><strong id="streakText">오늘 학습하면 출석!</strong></div><span>🔥</span></div>
+        <div id="weeklyAttendance" class="weekly-attendance"></div>
+        <p id="attendanceHint">퀴즈 50점 이상이면 자동으로 출석해요.</p>
+      </section>
       <section class="panel lesson-panel">
         <div class="step-badge">1</div>
         <div class="panel-title-wrap"><h2>오늘 배울 차시를 골라요</h2></div>
         <label class="sr-only" for="lessonSelect">학습 차시 선택</label>
         <select id="lessonSelect"><option>불러오는 중...</option></select>
+        <p id="activePlanLabel" class="plan-caption hidden"></p>
         <button id="lessonRetryBtn" class="text-btn hidden" type="button">↻ 다시 불러오기</button>
       </section>
 
@@ -59,6 +72,7 @@
         <button type="button" class="quiz-type-btn" data-type="sound-to-spelling"><span>🔊</span><strong>듣고 맞히기</strong><small>소리를 듣고 단어 찾기</small></button>
         <button type="button" class="quiz-type-btn" data-type="word-meaning-random"><span>🔤</span><strong>단어·뜻 맞히기</strong><small>단어와 뜻을 연결하기</small></button>
         <button type="button" class="quiz-type-btn" data-type="missing-letter"><span>🧩</span><strong>빠진 글자 찾기</strong><small>빈칸에 알맞은 글자 찾기</small></button>
+        <button type="button" class="quiz-type-btn" data-type="word-block"><span>🔠</span><strong>글자 블록 맞추기</strong><small>글자를 눌러 단어 완성하기</small></button>
         <button type="button" class="quiz-type-btn random-type" data-type="random"><span>🎲</span><strong>골고루 풀기</strong><small>여러 퀴즈가 섞여 나와요</small></button>
       </div>
     </section>
