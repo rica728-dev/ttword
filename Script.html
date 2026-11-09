@@ -133,6 +133,7 @@
   const studyScreen = document.getElementById('studyScreen');
   const quizSettingScreen = document.getElementById('quizSettingScreen');
   const quizScreen = document.getElementById('quizScreen');
+  const rainScreen = document.getElementById('rainScreen');
   const resultScreen = document.getElementById('resultScreen');
   const wrongNoteScreen = document.getElementById('wrongNoteScreen');
   const minuteScreen = document.getElementById('minuteScreen');
@@ -171,6 +172,20 @@
   const replayBtn = document.getElementById('replayBtn');
   const choiceList = document.getElementById('choiceList');
   const resultBox = document.getElementById('resultBox');
+  const rainHomeBtn = document.getElementById('rainHomeBtn');
+  const rainScore = document.getElementById('rainScore');
+  const rainLives = document.getElementById('rainLives');
+  const rainDirection = document.getElementById('rainDirection');
+  const rainPrompt = document.getElementById('rainPrompt');
+  const rainField = document.getElementById('rainField');
+  const rainMessage = document.getElementById('rainMessage');
+  let rainAnimationId = 0;
+  let rainItems = [];
+  let rainRound = 0;
+  let rainLifeCount = 3;
+  let rainLastTime = 0;
+  let rainRoundResolved = false;
+  let rainCorrectWordIds = [];
 
   const finalResultText = document.getElementById('finalResultText');
   const goWrongNoteBtn = document.getElementById('goWrongNoteBtn');
@@ -558,6 +573,149 @@
     showQuiz();
   }
 
+  function startRainGame() {
+    stopRainGame();
+    quizList = [];
+    quizIndex = 0;
+    totalAttempts = 0;
+    correctCount = 0;
+    wrongNotes = [];
+    rainRound = 0;
+    rainLifeCount = 3;
+    rainCorrectWordIds = [];
+    const pool = [...selectedWords];
+    shuffleArray(pool);
+    for (let i = 0; i < 10; i++) {
+      quizList.push({ type: 'rain-game', word: pool[i % pool.length] });
+    }
+    updateRainHud();
+    showScreen('rain');
+    startRainRound();
+  }
+
+  function startRainRound() {
+    cancelAnimationFrame(rainAnimationId);
+    rainItems = [];
+    rainRoundResolved = false;
+    rainLastTime = 0;
+    [...rainField.querySelectorAll('.rain-word')].forEach(function(node) { node.remove(); });
+    if (rainRound >= quizList.length || rainLifeCount <= 0) {
+      finishRainGame();
+      return;
+    }
+
+    const current = quizList[rainRound].word;
+    const koreanToEnglish = Math.random() < 0.65;
+    rainDirection.textContent = koreanToEnglish ? 'KOREAN → ENGLISH' : 'ENGLISH → KOREAN';
+    rainPrompt.textContent = koreanToEnglish ? current.korean : current.english;
+    rainMessage.textContent = `${rainRound + 1} / ${quizList.length} · 정답을 잡아요!`;
+
+    const distractors = selectedWords.filter(function(word) { return Number(word.id) !== Number(current.id); });
+    shuffleArray(distractors);
+    const choices = [current, ...distractors.slice(0, Math.min(3, distractors.length))];
+    shuffleArray(choices);
+    const lanes = choices.map(function(_, index) { return index; });
+    shuffleArray(lanes);
+
+    choices.forEach(function(word, index) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'rain-word';
+      button.textContent = koreanToEnglish ? word.english : word.korean;
+      button.dataset.correct = String(Number(word.id) === Number(current.id));
+      button.style.left = `${5 + lanes[index] * (90 / choices.length)}%`;
+      button.style.transform = 'translateX(-10%)';
+      rainField.appendChild(button);
+      const item = {
+        button,
+        y: -55 - index * 70,
+        speed: 48 + rainRound * 4 + index * 2,
+        correct: Number(word.id) === Number(current.id)
+      };
+      button.addEventListener('click', function() { hitRainWord(item, current); });
+      rainItems.push(item);
+    });
+
+    rainAnimationId = requestAnimationFrame(animateRain);
+  }
+
+  function animateRain(time) {
+    if (!rainLastTime) rainLastTime = time;
+    const delta = Math.min(0.04, (time - rainLastTime) / 1000);
+    rainLastTime = time;
+    const bottom = rainField.clientHeight - 50;
+
+    for (const item of rainItems) {
+      item.y += item.speed * delta;
+      if (!item.correct && item.y > bottom) item.y = -55 - Math.random() * 120;
+      item.button.style.top = `${item.y}px`;
+      if (item.correct && item.y > bottom) {
+        missRainWord();
+        return;
+      }
+    }
+    rainAnimationId = requestAnimationFrame(animateRain);
+  }
+
+  function hitRainWord(item, current) {
+    if (rainRoundResolved) return;
+    if (item.correct) {
+      rainRoundResolved = true;
+      cancelAnimationFrame(rainAnimationId);
+      correctCount++;
+      rainCorrectWordIds.push(current.id);
+      totalAttempts++;
+      rainMessage.textContent = 'GOOD! +100';
+      rainRound++;
+      updateRainHud();
+      setTimeout(startRainRound, 500);
+      return;
+    }
+
+    item.button.classList.add('wrong-hit');
+    item.button.disabled = true;
+    rainLifeCount--;
+    rainMessage.textContent = 'MISS! 다른 단어를 잡아요.';
+    updateRainHud();
+    if (rainLifeCount <= 0) {
+      rainRoundResolved = true;
+      cancelAnimationFrame(rainAnimationId);
+      totalAttempts++;
+      wrongNotes.push({ id: current.id });
+      setTimeout(finishRainGame, 500);
+    }
+  }
+
+  function missRainWord() {
+    if (rainRoundResolved) return;
+    rainRoundResolved = true;
+    cancelAnimationFrame(rainAnimationId);
+    const current = quizList[rainRound].word;
+    totalAttempts++;
+    wrongNotes.push({ id: current.id });
+    rainLifeCount--;
+    rainRound++;
+    rainMessage.textContent = `놓쳤어요! 정답은 ${current.english}`;
+    updateRainHud();
+    setTimeout(startRainRound, 700);
+  }
+
+  function updateRainHud() {
+    rainScore.textContent = `SCORE ${String(correctCount * 100).padStart(4, '0')}`;
+    rainLives.textContent = `LIFE ${'♥'.repeat(Math.max(0, rainLifeCount))}${'♡'.repeat(Math.max(0, 3 - rainLifeCount))}`;
+  }
+
+  function finishRainGame() {
+    stopRainGame();
+    finishQuiz();
+  }
+
+  function stopRainGame() {
+    cancelAnimationFrame(rainAnimationId);
+    rainAnimationId = 0;
+    rainRoundResolved = true;
+  }
+
   function showQuiz() {
     currentQuiz = quizList[quizIndex];
     const item = currentQuiz.word;
@@ -810,8 +968,10 @@
         isTestMode,
         accuracy,
         wrongWords: wrongNotes,
-        correctWordIds: quizList.map(function(quiz) { return quiz.word.id; })
-          .filter(function(id) { return !wrongNotes.some(function(item) { return Number(item.id) === Number(id); }); })
+        correctWordIds: selectedQuizType === 'rain-game'
+          ? rainCorrectWordIds
+          : quizList.map(function(quiz) { return quiz.word.id; })
+            .filter(function(id) { return !wrongNotes.some(function(item) { return Number(item.id) === Number(id); }); })
       });
   }
 
@@ -1116,6 +1276,7 @@ function speakStudyWord(item) {
     studyScreen.classList.remove('active');
     quizSettingScreen.classList.remove('active');
     quizScreen.classList.remove('active');
+    rainScreen.classList.remove('active');
     resultScreen.classList.remove('active');
     wrongNoteScreen.classList.remove('active');
     minuteScreen.classList.remove('active');
@@ -1125,6 +1286,7 @@ function speakStudyWord(item) {
     if (name === 'study') studyScreen.classList.add('active');
     if (name === 'quizSetting') quizSettingScreen.classList.add('active');
     if (name === 'quiz') quizScreen.classList.add('active');
+    if (name === 'rain') rainScreen.classList.add('active');
     if (name === 'result') resultScreen.classList.add('active');
     if (name === 'wrongNote') wrongNoteScreen.classList.add('active');
     if (name === 'minute') minuteScreen.classList.add('active');
@@ -1186,6 +1348,10 @@ function speakStudyWord(item) {
   });
 
   replayBtn.addEventListener('click', replaySound);
+  rainHomeBtn.addEventListener('click', function() {
+    stopRainGame();
+    showScreen('quizSetting');
+  });
 
   goWrongNoteBtn.addEventListener('click', openWrongNote);
 
@@ -1224,7 +1390,8 @@ function speakStudyWord(item) {
     button.classList.add('active');
     selectedQuizType = button.dataset.type;
 
-    startQuiz();
+    if (selectedQuizType === 'rain-game') startRainGame();
+    else startQuiz();
   });
 });
 </script>

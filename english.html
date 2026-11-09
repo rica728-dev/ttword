@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;800&display=swap" rel="stylesheet">
   <script>fetch('Style.html?v=20261109-2').then(r=>r.text()).then(html=>document.head.insertAdjacentHTML('beforeend',html));</script>
-  <style>.dashboard-link{color:#6556b5;text-decoration:none}.quiz-type-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.random-type{grid-column:auto;min-height:145px}@media(max-width:370px){.quiz-type-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.random-type{grid-column:auto;min-height:132px}.quiz-type-btn{min-height:132px;padding:14px 8px}.quiz-type-btn span{font-size:31px}.quiz-type-btn strong{font-size:14px}.quiz-type-btn small{font-size:10px}}</style>
+  <style>.dashboard-link{color:#6556b5;text-decoration:none}.quiz-type-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.random-type{grid-column:auto;min-height:145px}@media(max-width:370px){.quiz-type-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.random-type{grid-column:auto;min-height:132px}.quiz-type-btn{min-height:132px;padding:14px 8px}.quiz-type-btn span{font-size:31px}.quiz-type-btn strong{font-size:14px}.quiz-type-btn small{font-size:10px}}.rain-screen{background:#070b18;color:#57ff7c;border:4px solid #53647d;border-radius:12px;padding:12px;min-height:calc(100vh - 40px);font-family:Consolas,"Courier New",monospace;box-shadow:inset 0 0 0 3px #111b31}.rain-hud{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;font-weight:800;font-size:13px}.rain-hud button{min-height:40px;border:2px solid #56d9ff;border-radius:0;background:#071523;color:#56d9ff;font:inherit;font-weight:800}.rain-hud span:last-child{text-align:right;color:#ff668c}.rain-prompt{margin:12px 0 8px;padding:11px;border:2px solid #57ff7c;background:#071523;text-align:center}.rain-prompt small{display:block;color:#56d9ff;font-size:11px}.rain-prompt strong{display:block;margin-top:4px;color:#fff75c;font-size:26px;text-shadow:2px 2px #755b00}.rain-field{position:relative;height:min(58vh,470px);min-height:360px;overflow:hidden;border:2px solid #53647d;background:repeating-linear-gradient(0deg,rgba(55,88,120,.12) 0 1px,transparent 1px 4px),linear-gradient(#02040c,#091326)}.rain-word{position:absolute;z-index:2;min-width:70px;max-width:42%;padding:9px 10px;border:2px solid #56d9ff;border-radius:0;background:#06111e;color:#fff;font:800 17px Consolas,"Courier New",monospace;box-shadow:3px 3px 0 #173953;touch-action:manipulation}.rain-word:active{background:#173953}.rain-word.wrong-hit{border-color:#ff5577;color:#ff5577}.rain-ground{position:absolute;left:0;right:0;bottom:0;height:12px;background:repeating-linear-gradient(90deg,#57ff7c 0 14px,#123f24 14px 28px);box-shadow:0 -3px #173c2a}.rain-message{min-height:27px;margin:8px 0 0;text-align:center;color:#fff75c;font-weight:800}.rain-help{text-align:center;color:#91a4bd;font-size:11px;margin:6px 0 0}</style>
 </head>
 <body>
   <div id="testModeBanner" class="test-mode-banner hidden">🧪 관리자 테스트 모드 · 기록과 분 적립 없음</div>
@@ -77,12 +77,20 @@
         <button type="button" class="quiz-type-btn" data-type="missing-letter"><span>🧩</span><strong>빠진 글자 찾기</strong><small>빈칸에 알맞은 글자 찾기</small></button>
         <button type="button" class="quiz-type-btn" data-type="word-block"><span>🔠</span><strong>글자 블록 맞추기</strong><small>글자를 눌러 단어 완성하기</small></button>
         <button type="button" class="quiz-type-btn random-type" data-type="random"><span>🎲</span><strong>골고루 풀기</strong><small>여러 퀴즈가 섞여 나와요</small></button>
+        <button type="button" class="quiz-type-btn" data-type="rain-game"><span>🌧️</span><strong>단어비 게임</strong><small>떨어지는 정답을 잡아요</small></button>
       </div>
     </section>
 
     <section id="quizScreen" class="screen">
       <div class="top"><div class="top-buttons"><button id="quizHomeBtn" class="back-btn">← 홈</button><button id="backToQuizSettingBtn" class="secondary mini-btn">퀴즈 바꾸기</button></div><p id="quizProgress" class="progress-pill"></p></div>
       <div class="quiz-card"><div id="quizType" class="quiz-type"></div><div id="quizQuestion" class="quiz-question"></div><button id="replayBtn" class="speaker-wide">🔊 다시 듣기</button><div id="resultBox" class="result" aria-live="assertive"></div><div id="choiceList" class="choice-list"></div></div>
+    </section>
+
+    <section id="rainScreen" class="screen rain-screen">
+      <div class="rain-hud"><button id="rainHomeBtn" type="button">← EXIT</button><span id="rainScore">SCORE 0000</span><span id="rainLives">LIFE ♥♥♥</span></div>
+      <div class="rain-prompt"><small id="rainDirection">KOREAN → ENGLISH</small><strong id="rainPrompt">READY?</strong></div>
+      <div id="rainField" class="rain-field"><div class="rain-ground"></div></div>
+      <p id="rainMessage" class="rain-message">정답 단어가 바닥에 닿기 전에 눌러요!</p><p class="rain-help">오답을 누르면 LIFE가 줄어요 · 총 10문제</p>
     </section>
 
     <section id="resultScreen" class="screen result-screen"><div class="celebration">🎉</div><h1>퀴즈 끝!</h1><div class="summary-box"><p id="finalResultText"></p></div><button id="goWrongNoteBtn">틀린 단어 다시 보기</button><button id="resultQuizBtn" class="secondary">한 번 더 도전</button><button id="resultHomeBtn" class="text-btn">홈으로</button></section>
@@ -94,6 +102,6 @@
     <section id="adminScreen" class="screen"><div class="top"><button id="adminHomeBtn" class="back-btn">← 홈</button></div><div class="section-heading"><span>🔐</span><h1>관리자</h1></div><div class="panel"><label for="adminPasswordInput">관리자 비밀번호</label><input id="adminPasswordInput" type="password" placeholder="비밀번호 입력"><button id="adminLoginBtn">신청 내역 불러오기</button></div><div class="summary-box request-box"><h2>대기 신청</h2><p id="adminStatusText">비밀번호를 입력해 주세요.</p><div id="adminRequestList" class="admin-request-list"></div></div></section>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script>fetch('Script.html?v=20261109-5').then(r=>r.text()).then(html=>{const s=document.createElement('script');s.textContent=html.replace(/^\s*<script[^>]*>\s*/i,'').replace(/\s*<\/script>\s*$/i,'');document.body.appendChild(s);});</script>
+  <script>fetch('Script.html?v=20261109-6').then(r=>r.text()).then(html=>{const s=document.createElement('script');s.textContent=html.replace(/^\s*<script[^>]*>\s*/i,'').replace(/\s*<\/script>\s*$/i,'');document.body.appendChild(s);});</script>
 </body>
 </html>
