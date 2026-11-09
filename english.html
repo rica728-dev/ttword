@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;800&display=swap" rel="stylesheet">
   <script>fetch('Style.html?v=20261109-2').then(r=>r.text()).then(html=>document.head.insertAdjacentHTML('beforeend',html));</script>
-  <style>.dashboard-link{color:#6556b5;text-decoration:none}</style>
+  <style>.dashboard-link{color:#6556b5;text-decoration:none}.quiz-type-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.random-type{grid-column:auto;min-height:145px}@media(max-width:370px){.quiz-type-buttons{grid-template-columns:repeat(2,minmax(0,1fr))}.random-type{grid-column:auto;min-height:132px}.quiz-type-btn{min-height:132px;padding:14px 8px}.quiz-type-btn span{font-size:31px}.quiz-type-btn strong{font-size:14px}.quiz-type-btn small{font-size:10px}}</style>
 </head>
 <body>
   <div id="testModeBanner" class="test-mode-banner hidden">🧪 관리자 테스트 모드 · 기록과 분 적립 없음</div>
@@ -94,6 +94,6 @@
     <section id="adminScreen" class="screen"><div class="top"><button id="adminHomeBtn" class="back-btn">← 홈</button></div><div class="section-heading"><span>🔐</span><h1>관리자</h1></div><div class="panel"><label for="adminPasswordInput">관리자 비밀번호</label><input id="adminPasswordInput" type="password" placeholder="비밀번호 입력"><button id="adminLoginBtn">신청 내역 불러오기</button></div><div class="summary-box request-box"><h2>대기 신청</h2><p id="adminStatusText">비밀번호를 입력해 주세요.</p><div id="adminRequestList" class="admin-request-list"></div></div></section>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script>fetch('Script.html?v=20261109-2').then(r=>r.text()).then(html=>{const s=document.createElement('script');s.textContent=html.replace(/^\s*<script[^>]*>\s*/i,'').replace(/\s*<\/script>\s*$/i,'');document.body.appendChild(s);});</script>
+  <script>fetch('Script.html?v=20261109-5').then(r=>r.text()).then(html=>{const s=document.createElement('script');s.textContent=html.replace(/^\s*<script[^>]*>\s*/i,'').replace(/\s*<\/script>\s*$/i,'');document.body.appendChild(s);});</script>
 </body>
 </html>

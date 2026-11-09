@@ -126,6 +126,7 @@
   let wrongNotes = [];
   let activePlanLessons = [];
   const isTestMode = new URLSearchParams(window.location.search).get('test') === '1';
+  const initialScreen = new URLSearchParams(window.location.search).get('screen');
   const STARTUP_CACHE_KEY = 'ttwordStartupCacheV2';
 
   const startScreen = document.getElementById('startScreen');
@@ -217,6 +218,13 @@
       if (cached) renderInitialData(cached);
     } catch (error) {}
     loadInitialData();
+    if (initialScreen === 'minute') {
+      openMinuteScreen();
+    } else if (initialScreen === 'admin') {
+      adminStatusText.textContent = '관리자 비밀번호를 입력해 주세요.';
+      adminRequestList.innerHTML = '';
+      showScreen('admin');
+    }
   }
 
   function loadInitialData() {
@@ -1034,11 +1042,36 @@
     speakEnglish(currentQuiz.word.english);
   }
 
+  let installedVoices = [];
+
+  function refreshInstalledVoices() {
+    installedVoices = speechSynthesis.getVoices() || [];
+  }
+
+  function getVoiceForLanguage(language) {
+    refreshInstalledVoices();
+    const target = String(language).toLowerCase().replace('_', '-');
+    const languageCode = target.split('-')[0];
+
+    return installedVoices.find(function(voice) {
+      return String(voice.lang).toLowerCase().replace('_', '-') === target;
+    }) || installedVoices.find(function(voice) {
+      return String(voice.lang).toLowerCase().replace('_', '-').startsWith(languageCode + '-');
+    }) || null;
+  }
+
+  refreshInstalledVoices();
+  if ('onvoiceschanged' in speechSynthesis) {
+    speechSynthesis.onvoiceschanged = refreshInstalledVoices;
+  }
+
   function speakEnglish(text) {
     speechSynthesis.cancel();
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
+    const selectedEnglishVoice = getVoiceForLanguage('en-US');
+    if (selectedEnglishVoice) utterance.voice = selectedEnglishVoice;
     utterance.rate = 0.85;
 
     speechSynthesis.speak(utterance);
@@ -1048,10 +1081,14 @@ function speakStudyWord(item) {
 
   const englishVoice = new SpeechSynthesisUtterance(item.english);
   englishVoice.lang = 'en-US';
+  const selectedEnglishVoice = getVoiceForLanguage('en-US');
+  if (selectedEnglishVoice) englishVoice.voice = selectedEnglishVoice;
   englishVoice.rate = 0.85;
 
   const koreanVoice = new SpeechSynthesisUtterance(item.korean);
   koreanVoice.lang = 'ko-KR';
+  const selectedKoreanVoice = getVoiceForLanguage('ko-KR');
+  if (selectedKoreanVoice) koreanVoice.voice = selectedKoreanVoice;
   koreanVoice.rate = 0.9;
 
   englishVoice.onend = function() {
