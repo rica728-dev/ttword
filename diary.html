@@ -7,17 +7,18 @@
   <meta name="robots" content="noindex,nofollow,noarchive">
   <title>태태스터디 · 감사일기</title>
   <script>
-    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbynlW2C0qcAN74YNXW113TU3z415gzNO4YXhbxhPm7PQWuyeG-_G_LMm_woEHS_iMPfog/exec';
+    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxXa7uUxMbzBXfnYrFggVX9WtR-e4U9_p0WXR-delSNdcaqv2epwh4A0YGnnEI-RdCkbg/exec';
     window.SINGLE_USER_NAME = '태태';
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="DiaryStyle.css?v=20261109-1">
+  <style>.delete-btn{width:100%;min-height:50px;margin-top:10px;border:2px solid #f2b8c8;border-radius:16px;background:#fff;color:#b23f63;font-weight:800}.delete-btn:disabled{opacity:.55}</style>
 </head>
 <body>
   <main class="diary-app">
-    <header class="diary-header"><a href="index.html" aria-label="영어 학습으로 돌아가기">← 홈</a><div><p>태태스터디</p><h1>🌼 감사일기</h1></div></header>
+    <header class="diary-header"><a href="index.html" aria-label="대시보드로 돌아가기">← 홈</a><div><p>태태스터디</p><h1>🌼 감사일기</h1></div></header>
     <nav class="diary-tabs" aria-label="감사일기 메뉴"><button class="active" data-view="write">오늘 쓰기</button><button data-view="calendar">지난 일기</button></nav>
 
     <section id="writeView" class="diary-view active">
@@ -33,6 +34,7 @@
       <div class="weekdays"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
       <div id="calendarGrid" class="calendar-grid"></div>
       <article id="entryPreview" class="entry-preview"><p>꽃이 표시된 날짜를 눌러 일기를 읽어 보세요.</p></article>
+      <button id="deleteDiaryBtn" class="delete-btn" hidden>이 일기 삭제하기</button>
     </section>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

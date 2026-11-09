@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fff8e8">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>태태스터디 · 영어</title>
+  <script>
+    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxXa7uUxMbzBXfnYrFggVX9WtR-e4U9_p0WXR-delSNdcaqv2epwh4A0YGnnEI-RdCkbg/exec';
+    window.SINGLE_USER_NAME = '태태';
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;800&display=swap" rel="stylesheet">
+  <script>fetch('Style.html?v=20261109-2').then(r=>r.text()).then(html=>document.head.insertAdjacentHTML('beforeend',html));</script>
+  <style>.dashboard-link{color:#6556b5;text-decoration:none}</style>
+</head>
+<body>
+  <div id="testModeBanner" class="test-mode-banner hidden">🧪 관리자 테스트 모드 · 기록과 분 적립 없음</div>
+  <main class="app">
+    <section id="startScreen" class="screen active">
+      <header class="hero">
+        <button id="adminMenuBtn" class="icon-btn admin-link-btn" aria-label="관리자 화면">⚙️</button>
+        <div class="mascot" aria-hidden="true">T</div>
+        <div><p class="eyebrow"><a href="index.html" class="dashboard-link">← 태태스터디 홈</a></p><h1>영어 단어</h1></div>
+      </header>
+
+      <input id="userNameInput" type="hidden" value="태태">
+      <section id="studyPlanCard" class="plan-card loading-card">
+        <div class="plan-top"><span>🎯 이번 시험 준비</span><strong id="planDaysLeft"></strong></div>
+        <h2 id="planName">학습 계획 불러오는 중...</h2><p id="planLessons">잠시만 기다려 주세요</p>
+        <div class="goal-row"><span>오늘의 목표</span><strong id="dailyGoalText"></strong></div>
+        <div class="progress-track"><span id="dailyGoalBar"></span></div>
+        <p id="masteryText" class="plan-caption"></p>
+      </section>
+      <section class="attendance-card">
+        <div class="attendance-head"><div><small>이번 주 출석</small><strong id="streakText">오늘 학습하면 출석!</strong></div><span>🔥</span></div>
+        <div id="weeklyAttendance" class="weekly-attendance"></div>
+        <p id="attendanceHint">퀴즈 50점 이상이면 자동으로 출석해요.</p>
+      </section>
+      <section class="panel lesson-panel">
+        <div class="step-badge">1</div>
+        <div class="panel-title-wrap"><h2>오늘 배울 차시를 골라요</h2></div>
+        <label class="sr-only" for="lessonSelect">학습 차시 선택</label>
+        <select id="lessonSelect"><option>불러오는 중...</option></select>
+        <p id="activePlanLabel" class="plan-caption hidden"></p>
+        <button id="lessonRetryBtn" class="text-btn hidden" type="button">↻ 다시 불러오기</button>
+      </section>
+
+      <div class="action-grid" aria-label="학습 메뉴">
+        <button id="studyBtn" class="action-card study-action"><span class="action-icon">📖</span><span><strong>단어 학습</strong><small>듣고 따라 읽어요</small></span></button>
+        <button id="quizMenuBtn" class="action-card quiz-action"><span class="action-icon">⭐</span><span><strong>퀴즈 도전</strong><small>재미있게 풀어요</small></span></button>
+        <button id="wrongNoteBtn" class="action-card note-action"><span class="action-icon">✏️</span><span><strong>다시 보기</strong><small>틀린 단어를 복습해요</small></span></button>
+      </div>
+
+      <div class="summary-box home-summary">
+        <div><span class="summary-icon">⏱️</span><div><small>나의 놀이 시간</small><p id="minuteSummary">기록을 불러오는 중...</p></div></div>
+        <button id="minuteMenuBtn" class="compact-btn secondary">시간 쓰기</button>
+      </div>
+    </section>
+
+    <section id="studyScreen" class="screen">
+      <div class="top"><button id="studyHomeBtn" class="back-btn">← 홈</button><p id="studyProgress" class="progress-pill"></p></div>
+      <p class="study-label">소리 내어 따라 읽어 봐요</p>
+      <div class="card study-card"><button id="studySpeakBtn" class="speaker-btn" aria-label="단어 다시 듣기">🔊</button><div id="studyWord" class="word"></div><div id="studyMeaning" class="meaning"></div></div>
+      <div class="button-row"><button id="pauseBtn" class="secondary">⏸ 잠깐 멈춤</button><button id="resumeBtn" class="hidden">▶ 계속하기</button><button id="studyQuizBtn">퀴즈 풀기 ⭐</button></div>
+    </section>
+
+    <section id="quizSettingScreen" class="screen">
+      <div class="top"><button id="quizSettingHomeBtn" class="back-btn">← 홈</button></div>
+      <div class="section-heading"><span>⭐</span><h1>어떤 퀴즈를 풀까?</h1><p>누르면 바로 시작해요!</p></div>
+      <div class="reward-rule"><strong>⏱️ 퀴즈 적립</strong><p>90점 이상 3분 · 70점 이상 2분 · 50점 이상 1분<br>퀴즈 형태별 첫 응시는 적립되고, 재도전은 최고 점수가 오를 때 추가 적립돼요.</p></div>
+      <div class="quiz-type-buttons">
+        <button type="button" class="quiz-type-btn" data-type="sound-to-spelling"><span>🔊</span><strong>듣고 맞히기</strong><small>소리를 듣고 단어 찾기</small></button>
+        <button type="button" class="quiz-type-btn" data-type="word-meaning-random"><span>🔤</span><strong>단어·뜻 맞히기</strong><small>단어와 뜻을 연결하기</small></button>
+        <button type="button" class="quiz-type-btn" data-type="missing-letter"><span>🧩</span><strong>빠진 글자 찾기</strong><small>빈칸에 알맞은 글자 찾기</small></button>
+        <button type="button" class="quiz-type-btn" data-type="word-block"><span>🔠</span><strong>글자 블록 맞추기</strong><small>글자를 눌러 단어 완성하기</small></button>
+        <button type="button" class="quiz-type-btn random-type" data-type="random"><span>🎲</span><strong>골고루 풀기</strong><small>여러 퀴즈가 섞여 나와요</small></button>
+      </div>
+    </section>
+
+    <section id="quizScreen" class="screen">
+      <div class="top"><div class="top-buttons"><button id="quizHomeBtn" class="back-btn">← 홈</button><button id="backToQuizSettingBtn" class="secondary mini-btn">퀴즈 바꾸기</button></div><p id="quizProgress" class="progress-pill"></p></div>
+      <div class="quiz-card"><div id="quizType" class="quiz-type"></div><div id="quizQuestion" class="quiz-question"></div><button id="replayBtn" class="speaker-wide">🔊 다시 듣기</button><div id="resultBox" class="result" aria-live="assertive"></div><div id="choiceList" class="choice-list"></div></div>
+    </section>
+
+    <section id="resultScreen" class="screen result-screen"><div class="celebration">🎉</div><h1>퀴즈 끝!</h1><div class="summary-box"><p id="finalResultText"></p></div><button id="goWrongNoteBtn">틀린 단어 다시 보기</button><button id="resultQuizBtn" class="secondary">한 번 더 도전</button><button id="resultHomeBtn" class="text-btn">홈으로</button></section>
+
+    <section id="wrongNoteScreen" class="screen"><div class="top"><button id="wrongHomeBtn" class="back-btn">← 홈</button></div><div class="section-heading"><span>✏️</span><h1>다시 보기</h1><p>천천히 다시 익혀 봐요.</p></div><div id="wrongList" class="wrong-list"></div></section>
+
+    <section id="minuteScreen" class="screen"><div class="top"><button id="minuteHomeBtn" class="back-btn">← 홈</button></div><div class="section-heading"><span>⏱️</span><h1>놀이 시간 쓰기</h1></div><div class="summary-box"><p id="minuteDetailText"></p></div><div class="panel"><label for="useMinuteInput">몇 분을 쓸까요?</label><div class="input-row"><input id="useMinuteInput" type="number" min="1" inputmode="numeric" placeholder="예: 10"><button id="useMinuteBtn" class="compact-btn">신청</button></div></div><div class="summary-box request-box"><h2>최근 신청</h2><div class="request-header"><span>날짜</span><span>시간</span><span>상태</span></div><div id="minuteRequestList" class="request-list">최근 신청이 없어요.</div></div></section>
+
+    <section id="adminScreen" class="screen"><div class="top"><button id="adminHomeBtn" class="back-btn">← 홈</button></div><div class="section-heading"><span>🔐</span><h1>관리자</h1></div><div class="panel"><label for="adminPasswordInput">관리자 비밀번호</label><input id="adminPasswordInput" type="password" placeholder="비밀번호 입력"><button id="adminLoginBtn">신청 내역 불러오기</button></div><div class="summary-box request-box"><h2>대기 신청</h2><p id="adminStatusText">비밀번호를 입력해 주세요.</p><div id="adminRequestList" class="admin-request-list"></div></div></section>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>fetch('Script.html?v=20261109-2').then(r=>r.text()).then(html=>{const s=document.createElement('script');s.textContent=html.replace(/^\s*<script[^>]*>\s*/i,'').replace(/\s*<\/script>\s*$/i,'');document.body.appendChild(s);});</script>
+</body>
+</html>
