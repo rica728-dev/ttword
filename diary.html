@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fff5f0">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>태태스터디 · 감사일기</title>
+  <script>
+    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbynlW2C0qcAN74YNXW113TU3z415gzNO4YXhbxhPm7PQWuyeG-_G_LMm_woEHS_iMPfog/exec';
+    window.SINGLE_USER_NAME = '태태';
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="DiaryStyle.css?v=20261109-1">
+</head>
+<body>
+  <main class="diary-app">
+    <header class="diary-header"><a href="index.html" aria-label="영어 학습으로 돌아가기">← 홈</a><div><p>태태스터디</p><h1>🌼 감사일기</h1></div></header>
+    <nav class="diary-tabs" aria-label="감사일기 메뉴"><button class="active" data-view="write">오늘 쓰기</button><button data-view="calendar">지난 일기</button></nav>
+
+    <section id="writeView" class="diary-view active">
+      <div class="date-card"><span>오늘</span><strong id="todayLabel">날짜 확인 중...</strong></div>
+      <div class="prompt-card"><span>💛</span><div><strong>오늘 고마웠던 일은 무엇인가요?</strong><p>작은 일도 좋아요. 천천히 떠올려 봐요.</p></div></div>
+      <label class="writing-card" for="diaryContent"><textarea id="diaryContent" maxlength="1000" placeholder="예: 오늘 친구가 모르는 문제를 친절하게 알려줘서 고마웠어요..."></textarea><span id="characterCount">0 / 30자 이상</span></label>
+      <button id="saveDiaryBtn" class="primary-btn" disabled>감사일기 저장하기</button>
+      <p id="saveStatus" class="status" aria-live="polite"></p>
+    </section>
+
+    <section id="calendarView" class="diary-view">
+      <div class="calendar-head"><button id="prevMonthBtn" aria-label="이전 달">‹</button><h2 id="calendarTitle"></h2><button id="nextMonthBtn" aria-label="다음 달">›</button></div>
+      <div class="weekdays"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div id="calendarGrid" class="calendar-grid"></div>
+      <article id="entryPreview" class="entry-preview"><p>꽃이 표시된 날짜를 눌러 일기를 읽어 보세요.</p></article>
+    </section>
+  </main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="DiaryScript.js?v=20261109-1"></script>
+</body>
+</html>

@@ -5,17 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#fff8e8">
   <meta name="robots" content="noindex,nofollow,noarchive">
-  <title>티티 영단어</title>
+  <title>태태스터디 · 영어</title>
   <script>
-    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyKrpWwOYPu2XBMud-PZ4wFniVbHH-Yx5H_-vVFQrXmRqNlQW7S_fTGcHSinKjnrjkQxA/exec';
+    window.GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbynlW2C0qcAN74YNXW113TU3z415gzNO4YXhbxhPm7PQWuyeG-_G_LMm_woEHS_iMPfog/exec';
     window.SINGLE_USER_NAME = '태태';
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@500;700;800&display=swap" rel="stylesheet">
-  <script>fetch('Style.html').then(r=>r.text()).then(html=>document.head.insertAdjacentHTML('beforeend',html));</script>
+  <script>fetch('Style.html?v=20261109-2').then(r=>r.text()).then(html=>document.head.insertAdjacentHTML('beforeend',html));</script>
 </head>
 <body>
+  <div id="testModeBanner" class="test-mode-banner hidden">🧪 관리자 테스트 모드 · 기록과 분 적립 없음</div>
   <main class="app">
     <section id="startScreen" class="screen active">
       <header class="hero">
@@ -25,9 +26,9 @@
       </header>
 
       <input id="userNameInput" type="hidden" value="태태">
-      <section id="studyPlanCard" class="plan-card hidden">
+      <section id="studyPlanCard" class="plan-card loading-card">
         <div class="plan-top"><span>🎯 이번 시험 준비</span><strong id="planDaysLeft"></strong></div>
-        <h2 id="planName"></h2><p id="planLessons"></p>
+        <h2 id="planName">학습 계획 불러오는 중...</h2><p id="planLessons">잠시만 기다려 주세요</p>
         <div class="goal-row"><span>오늘의 목표</span><strong id="dailyGoalText"></strong></div>
         <div class="progress-track"><span id="dailyGoalBar"></span></div>
         <p id="masteryText" class="plan-caption"></p>
@@ -56,6 +57,7 @@
         <div><span class="summary-icon">⏱️</span><div><small>나의 놀이 시간</small><p id="minuteSummary">기록을 불러오는 중...</p></div></div>
         <button id="minuteMenuBtn" class="compact-btn secondary">시간 쓰기</button>
       </div>
+      <a class="diary-entry-card" href="diary.html"><span>🌼</span><span><strong>감사일기</strong><small>오늘 고마웠던 일을 30자 이상 써 봐요</small></span><b>쓰기 ›</b></a>
     </section>
 
     <section id="studyScreen" class="screen">
@@ -68,6 +70,7 @@
     <section id="quizSettingScreen" class="screen">
       <div class="top"><button id="quizSettingHomeBtn" class="back-btn">← 홈</button></div>
       <div class="section-heading"><span>⭐</span><h1>어떤 퀴즈를 풀까?</h1><p>누르면 바로 시작해요!</p></div>
+      <div class="reward-rule"><strong>⏱️ 퀴즈 적립</strong><p>90점 이상 3분 · 70점 이상 2분 · 50점 이상 1분<br>퀴즈 형태별 첫 응시는 적립되고, 재도전은 최고 점수가 오를 때 추가 적립돼요.</p></div>
       <div class="quiz-type-buttons">
         <button type="button" class="quiz-type-btn" data-type="sound-to-spelling"><span>🔊</span><strong>듣고 맞히기</strong><small>소리를 듣고 단어 찾기</small></button>
         <button type="button" class="quiz-type-btn" data-type="word-meaning-random"><span>🔤</span><strong>단어·뜻 맞히기</strong><small>단어와 뜻을 연결하기</small></button>
@@ -91,6 +94,6 @@
     <section id="adminScreen" class="screen"><div class="top"><button id="adminHomeBtn" class="back-btn">← 홈</button></div><div class="section-heading"><span>🔐</span><h1>관리자</h1></div><div class="panel"><label for="adminPasswordInput">관리자 비밀번호</label><input id="adminPasswordInput" type="password" placeholder="비밀번호 입력"><button id="adminLoginBtn">신청 내역 불러오기</button></div><div class="summary-box request-box"><h2>대기 신청</h2><p id="adminStatusText">비밀번호를 입력해 주세요.</p><div id="adminRequestList" class="admin-request-list"></div></div></section>
   </main>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script>fetch('Script.html').then(r=>r.text()).then(html=>{const s=document.createElement('script');s.textContent=html.replace(/^\s*<script[^>]*>\s*/i,'').replace(/\s*<\/script>\s*$/i,'');document.body.appendChild(s);});</script>
+  <script>fetch('Script.html?v=20261109-2').then(r=>r.text()).then(html=>{const s=document.createElement('script');s.textContent=html.replace(/^\s*<script[^>]*>\s*/i,'').replace(/\s*<\/script>\s*$/i,'');document.body.appendChild(s);});</script>
 </body>
 </html>

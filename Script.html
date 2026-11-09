@@ -125,6 +125,8 @@
   let correctCount = 0;
   let wrongNotes = [];
   let activePlanLessons = [];
+  const isTestMode = new URLSearchParams(window.location.search).get('test') === '1';
+  const STARTUP_CACHE_KEY = 'ttwordStartupCacheV2';
 
   const startScreen = document.getElementById('startScreen');
   const studyScreen = document.getElementById('studyScreen');
@@ -205,9 +207,42 @@
 
   function init() {
     userNameInput.value = userName;
-    loadUserSummary(userName);
-    loadActivePlan();
-    loadLessonOptions();
+    if (isTestMode) {
+      document.getElementById('testModeBanner').classList.remove('hidden');
+      minuteMenuBtn.disabled = true;
+      minuteMenuBtn.title = '테스트 모드에서는 시간 신청을 사용할 수 없어요.';
+    }
+    try {
+      const cached = JSON.parse(localStorage.getItem(STARTUP_CACHE_KEY) || 'null');
+      if (cached) renderInitialData(cached);
+    } catch (error) {}
+    loadInitialData();
+  }
+
+  function loadInitialData() {
+    lessonSelect.disabled = true;
+    google.script.run
+      .withSuccessHandler(function(data) {
+        renderInitialData(data);
+        localStorage.setItem(STARTUP_CACHE_KEY, JSON.stringify(data));
+      })
+      .withFailureHandler(function(error) {
+        lessonSelect.disabled = false;
+        if (lessonRetryBtn) lessonRetryBtn.classList.remove('hidden');
+        showToast(error.message || '데이터를 불러오지 못했어요.');
+      })
+      .getInitialData(userName);
+  }
+
+  function renderInitialData(data) {
+    if (data.lessons && data.lessons.length) loadLessons(data.lessons);
+    if (data.summary) renderMinuteSummary(data.summary);
+    activePlanLessons = data.plan && data.plan.active ? (data.plan.lessons || []) : [];
+    if (data.plan) renderPlanSummary(data.plan);
+    if (data.attendance) renderAttendance(data.attendance);
+    applyActivePlanSelection();
+    lessonSelect.disabled = false;
+    if (lessonRetryBtn) lessonRetryBtn.classList.add('hidden');
   }
 
   function loadActivePlan() {
@@ -254,6 +289,7 @@
     const card = document.getElementById('studyPlanCard');
     if (!card || !plan || !plan.active) return;
     card.classList.remove('hidden');
+    card.classList.remove('loading-card');
     document.getElementById('planName').textContent = plan.planName || '이번 시험 준비';
     document.getElementById('planLessons').textContent = `시험 범위: ${(plan.lessons || []).join(', ')}`;
     document.getElementById('planDaysLeft').textContent = plan.daysLeft > 0 ? `D-${plan.daysLeft}` : plan.daysLeft === 0 ? '오늘 시험!' : '시험 완료';
@@ -567,9 +603,16 @@
 
   function makeWordBlockQuiz(english) {
     const answer = String(english).replace(/[^a-z]/gi, '').toLowerCase();
-    const letters = answer.split('').map(function(letter, index) {
+    const correctLetters = answer.split('').map(function(letter, index) {
       return { id: `${index}-${letter}`, letter };
     });
+    const distractorPool = 'abcdefghijklmnopqrstuvwxyz'.split('')
+      .filter(function(letter) { return !answer.includes(letter); });
+    shuffleArray(distractorPool);
+    const distractors = distractorPool.slice(0, 2).map(function(letter, index) {
+      return { id: `wrong-${index}-${letter}`, letter, distractor: true };
+    });
+    const letters = correctLetters.concat(distractors);
     shuffleArray(letters);
 
     const answerArea = document.createElement('div');
@@ -591,7 +634,7 @@
       button.addEventListener('click', function() {
         const movingToAnswer = button.parentNode === sourceArea;
         (movingToAnswer ? answerArea : sourceArea).appendChild(button);
-        if (answerArea.children.length === letters.length) {
+        if (answerArea.children.length === answer.length) {
           const userAnswer = [...answerArea.children]
             .map(function(block) { return block.textContent; }).join('');
           checkChoice(userAnswer, answer);
@@ -730,27 +773,33 @@
       ? 0
       : Math.round((correctCount / totalAttempts) * 100);
 
+    finalResultText.textContent = isTestMode
+      ? `테스트 모드 · 정답률 ${accuracy}% · 기록하지 않아요.`
+      : `정답률 ${accuracy}% · 결과 저장 중...`;
+    showScreen('result');
+
     google.script.run
       .withSuccessHandler(function(summary) {
         const bonus = summary.attendance && summary.attendance.milestoneBonus;
-        finalResultText.textContent = bonus && bonus.minute > 0
+        finalResultText.textContent = summary.testMode
+          ? `테스트 모드 · 정답률 ${accuracy}% · 기록하지 않았어요.`
+          : bonus && bonus.minute > 0
           ? `${summary.attendance.streak}일 연속 출석! 대단해요. 보상으로 +${bonus.minute}분을 받았어요!`
           : `정답률 ${accuracy}% · +${summary.lastQuizMinute || 0}분`;
 
         renderMinuteSummary(summary);
         if (summary.attendance) renderAttendance(summary.attendance);
         if (summary.plan) renderPlanSummary(summary.plan);
-        showScreen('result');
       })
       .withFailureHandler(function(error) {
-        alert(error.message);
         finalResultText.textContent =
-          `정답률 ${accuracy}%`;
-        showScreen('result');
+          `정답률 ${accuracy}% · 저장에 실패했어요. 홈에서 다시 확인해 주세요.`;
       })
       .saveQuizResultEnhanced({
         userName,
         lesson: selectedLesson,
+        quizType: selectedQuizType,
+        isTestMode,
         accuracy,
         wrongWords: wrongNotes,
         correctWordIds: quizList.map(function(quiz) { return quiz.word.id; })
@@ -1058,7 +1107,7 @@ function speakStudyWord(item) {
   studyBtn.addEventListener('click', startStudy);
   quizMenuBtn.addEventListener('click', openQuizSetting);
   wrongNoteBtn.addEventListener('click', openWrongNote);
-  if (lessonRetryBtn) lessonRetryBtn.addEventListener('click', loadLessonOptions);
+  if (lessonRetryBtn) lessonRetryBtn.addEventListener('click', loadInitialData);
   minuteMenuBtn.addEventListener('click', openMinuteScreen);
   adminMenuBtn.addEventListener('click', function() {
     adminStatusText.textContent = '비밀번호를 입력해주세요.';
